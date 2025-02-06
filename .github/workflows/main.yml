@@ -1,44 +1,39 @@
-name: Terraform Deploy to Azure
+name: Terraform Deployment
 
 on:
   push:
     branches:
-      - main  # Runs on pushes to the main branch
-  pull_request:
+      - main  # Change to your branch name if needed
 
 jobs:
   terraform:
-    name: 'Terraform Init, Plan & Apply'
+    name: Terraform Plan & Apply
     runs-on: ubuntu-latest
 
-    env:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
     steps:
-    - name: 🛎 Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: 🔐 Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: >
+            {
+              "clientId": "${{ secrets.CLIENT_ID }}",
+              "clientSecret": "${{ secrets.CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.TENANT_ID }}"
+            }
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
 
-    - name: 📂 Set up Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: 1.5.7  # Adjust based on your needs
+      - name: Initialize Terraform
+        run: terraform init
 
-    - name: 🔍 Terraform Init
-      run: terraform init -backend-config="storage_account_name=${{ secrets.AZURE_STORAGE_ACCOUNT }}" \
-                           -backend-config="container_name=${{ secrets.AZURE_STORAGE_CONTAINER }}" \
-                           -backend-config="key=terraform.tfstate" \
-                           -backend-config="access_key=${{ secrets.AZURE_STORAGE_KEY }}"
+      - name: Terraform Plan
+        run: terraform plan
 
-    - name: 📝 Terraform Plan
-      run: terraform plan -out=tfplan
-
-    - name: 🚀 Terraform Apply
-      run: terraform apply -auto-approve tfplan
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
