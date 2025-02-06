@@ -1,0 +1,44 @@
+name: Terraform Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main  # Runs on pushes to the main branch
+  pull_request:
+
+jobs:
+  terraform:
+    name: 'Terraform Init, Plan & Apply'
+    runs-on: ubuntu-latest
+
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    steps:
+    - name: 🛎 Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 🔐 Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: 📂 Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.7  # Adjust based on your needs
+
+    - name: 🔍 Terraform Init
+      run: terraform init -backend-config="storage_account_name=${{ secrets.AZURE_STORAGE_ACCOUNT }}" \
+                           -backend-config="container_name=${{ secrets.AZURE_STORAGE_CONTAINER }}" \
+                           -backend-config="key=terraform.tfstate" \
+                           -backend-config="access_key=${{ secrets.AZURE_STORAGE_KEY }}"
+
+    - name: 📝 Terraform Plan
+      run: terraform plan -out=tfplan
+
+    - name: 🚀 Terraform Apply
+      run: terraform apply -auto-approve tfplan
